@@ -7,7 +7,6 @@ AC_PROG_CC
 AC_PROG_CPP
 AC_PROG_INSTALL
 
-
 test "$cross_compiling" = "yes" || AC_C_BIGENDIAN
 test "$ac_cv_c_bigendian" = "no" && ENDIAN="-DIS_LITTLE_ENDIAN"
 
@@ -21,7 +20,6 @@ AC_MSG_ERROR(your system must support either usleep or select)
 
 
 
-LIBS="$LIBS -L/usr/local/lib -L/usr/X11R6/lib"
 
 
 
@@ -77,10 +75,7 @@ with_svgalib=no
 fi
 
 if test "$with_sdl" != "no" ; then
-AC_CHECK_PROG(SDL_CONFIG, sdl-config, yes)
-if test "$SDL_CONFIG" ; then
-SDL_LIBS="`sdl-config --libs`"
-SDL_CFLAGS="`sdl-config --cflags`"
+PKG_CHECK_MODULES(SDL, sdl >= 1.2.0)
 old_incs="$INCS"
 INCS="$INCS $SDL_CFLAGS"
 AC_CHECK_LIB(SDL, SDL_Init, [
@@ -91,7 +86,6 @@ with_sdl=no
 INCS="$old_incs"
 else
 with_sdl=no
-fi
 fi
 
 AC_PATH_X
@@ -133,7 +127,7 @@ AC_ARG_ENABLE(asm,      [  --enable-asm            use hand-optimized asm cores]
 if test "$enable_warnings" = yes ; then
 case "$CC" in *gcc*)
 AC_MSG_RESULT(enabling selected compiler warnings)
-CFLAGS="$CFLAGS -ansi -pedantic -Wall -Wno-implicit -Wno-long-long" ;;
+CFLAGS="$CFLAGS -ansi -pedantic -Wall -Wno-implicit -Wno-long-long -std=c99" ;;
 *)
 AC_MSG_RESULT(disabling warnings for non-gcc compiler) ;;
 esac
