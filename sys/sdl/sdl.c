@@ -14,13 +14,15 @@
 
 #include <SDL/SDL.h>
 
-#include "SFont.h"
-#include "font8px.h"
-
 #include "gnuboy.h"
 #include "fb.h"
 #include "input.h"
 #include "rc.h"
+
+#ifndef GNUBOY_DISABLE_SDL_VIDEO
+
+#include "SFont.h"
+#include "font8px.h"
 
 struct fb fb;
 
@@ -80,7 +82,7 @@ static int mapscancode(SDLKey sym)
 
 	int i;
 	for (i = 0; keymap[i][0]; i++)
-		if (keymap[i][0] == sym)
+		if (keymap[i][0] == (int)sym)
 			return keymap[i][1];
 	if (sym >= '0' && sym <= '9')
 		return sym;
@@ -193,7 +195,7 @@ void vid_init()
 	if (fullscreen)
 		flags |= SDL_FULLSCREEN;
 
-	if (SDL_Init(SDL_INIT_VIDEO))
+	if (SDL_Init(SDL_INIT_VIDEO|SDL_INIT_AUDIO))
 		die("SDL: Couldn't initialize SDL: %s\n", SDL_GetError());
 	atexit(SDL_Quit); /* gnuboy uses exit() alot, so need to clear SDL correctly */
 
@@ -549,6 +551,7 @@ int vid_screenshot(char *filename)
 }
 #endif /*GNUBOY_NO_SCREENSHOT */
 
+#endif /* GNUBOY_DISABLE_SDL_VIDEO */
 
 
 #ifndef GNUBOY_DISABLE_SDL_SOUND
@@ -573,11 +576,17 @@ rcvar_t pcm_exports[] =
 };
 
 
-static void audio_callback(void *blah, byte *stream, int len)
+static void audio_callback(void *blah, signed short *stream, int len)
 {
-	(void) blah; /* avoid warning about unused parameter */
-
-	memcpy(stream, pcm.buf, len);
+	int teller = 0;
+	signed short w;
+	byte * bleh = (byte *) stream;
+	for (teller = 0; teller < pcm.len; teller++)
+	{
+		w = ((pcm.buf[teller] - 128) << 8);
+		*bleh++ = w & 0xFF ;
+		*bleh++ = w >> 8;
+	}
 	audio_done = 1;
 }
 
@@ -589,9 +598,8 @@ void pcm_init()
 
 	if (!sound) return;
 	
-	SDL_InitSubSystem(SDL_INIT_AUDIO);
 	as.freq = samplerate;
-	as.format = AUDIO_U8;
+	as.format = AUDIO_S16;
 	as.channels = 1 + stereo;
 	as.samples = samplerate / 60;
 	for (i = 1; i < as.samples; i<<=1);
@@ -603,7 +611,7 @@ void pcm_init()
 	
 	pcm.hz = as.freq;
 	pcm.stereo = as.channels - 1;
-	pcm.len = as.size;
+	pcm.len = as.size/2;
 	pcm.buf = malloc(pcm.len);
 	pcm.pos = 0;
 	memset(pcm.buf, 0, pcm.len);
